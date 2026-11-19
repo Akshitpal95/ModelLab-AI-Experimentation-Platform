@@ -1,0 +1,86 @@
+
+.comparison-chart-card {
+  width: 100%;
+  min-width: 0;
+
+  background: #ffffff;
+
+  border: 1px solid #e8e9e4;
+  border-radius: 18px;
+
+  padding: 23px 24px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+
+/* Header */
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chart-header h3 {
+  font-size: 15px;
+  font-weight: 650;
+  color: #344238;
+
+  letter-spacing: -0.3px;
+}
+
+.chart-header p {
+  margin-top: 6px;
+
+  font-size: 11px;
+  color: #929b93;
+}
+
+
+/* Header Label */
+
+.chart-period {
+  font-size: 10px;
+  font-weight: 550;
+
+  color: #718578;
+  background: #eef3ed;
+
+  padding: 8px 11px;
+  border-radius: 8px;
+}
+
+
+/* Chart Container */
+
+.chart-container {
+  width: 100%;
+  height: 280px;
+  min-width: 0;
+}
+
+
+/* Responsive */
+
+@media (max-width: 600px) {
+  .comparison-chart-card {
+    padding: 17px;
+    gap: 16px;
+  }
+
+  .chart-container {
+    height: 250px;
+  }
+
+  .chart-header {
+    align-items: flex-start;
+  }
+
+  .chart-period {
+    font-size: 9px;
+  }
+}

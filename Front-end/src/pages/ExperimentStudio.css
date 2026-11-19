@@ -1,0 +1,234 @@
+
+.experiment-studio {
+  padding: 30px 32px;
+  animation: experimentFade 0.25s ease;
+}
+
+.experiment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.experiment-header h1 {
+  color: #293d32;
+  font-size: 28px;
+  margin: 8px 0;
+}
+
+.experiment-header p {
+  color: #7c8980;
+  font-size: 14px;
+}
+
+.experiment-header-icon,
+.experiment-section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #edf3ed;
+  color: #54745f;
+  border-radius: 12px;
+}
+
+.experiment-header-icon {
+  width: 54px;
+  height: 54px;
+}
+
+.experiment-section {
+  background: #fff;
+  border: 1px solid #e8ece6;
+  border-radius: 15px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.experiment-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 22px;
+}
+
+.experiment-section-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+}
+
+.experiment-section-heading h2 {
+  color: #304338;
+  font-size: 17px;
+  margin: 0 0 5px;
+}
+
+.experiment-section-heading p {
+  color: #859087;
+  font-size: 13px;
+  margin: 0;
+}
+
+.experiment-select {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #dfe7df;
+  border-radius: 9px;
+  background: #fafcf9;
+  color: #405b49;
+  font-size: 14px;
+  outline: none;
+}
+
+.experiment-model-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.experiment-model-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #e5ebe4;
+  border-radius: 10px;
+  background: #fff;
+  color: #56675b;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.experiment-model-option:hover {
+  border-color: #9bb5a0;
+}
+
+.experiment-model-option.selected {
+  border-color: #71977c;
+  background: #f1f6f1;
+  color: #3e654b;
+}
+
+.model-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 23px;
+  height: 23px;
+  border: 1px solid #d8e2d8;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.experiment-selection-count {
+  color: #829087;
+  font-size: 12px;
+  margin-top: 15px;
+}
+
+.experiment-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 25px;
+}
+
+.experiment-setting label {
+  display: flex;
+  justify-content: space-between;
+  color: #526458;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.experiment-setting label strong {
+  color: #54745f;
+}
+
+.experiment-setting input[type="range"] {
+  width: 100%;
+  accent-color: #71977c;
+}
+
+.experiment-setting input[type="number"] {
+  width: 100%;
+  padding: 11px;
+  border: 1px solid #e0e8df;
+  border-radius: 8px;
+  outline-color: #71977c;
+}
+
+.experiment-setting small {
+  display: block;
+  color: #89948c;
+  font-size: 11px;
+  margin-top: 9px;
+}
+
+.experiment-info {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 10px;
+  background: #f1f5f0;
+  color: #58715f;
+  margin-bottom: 22px;
+}
+
+.experiment-info p {
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.experiment-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.run-experiment-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: none;
+  border-radius: 9px;
+  padding: 13px 21px;
+  background: #52765d;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.run-experiment-btn:hover {
+  background: #3e6149;
+}
+
+@keyframes experimentFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 750px) {
+  .experiment-studio {
+    padding: 20px 16px;
+  }
+
+  .experiment-model-grid,
+  .experiment-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .experiment-header h1 {
+    font-size: 23px;
+  }
+}

@@ -1,0 +1,322 @@
+
+/* ==========================
+   SIDEBAR CONTAINER
+========================== */
+
+.sidebar {
+  width: clamp(66px, 5.5vw, 82px);
+  min-width: clamp(66px, 5.5vw, 82px);
+
+  height: calc(100dvh - 32px);
+  max-height: calc(100dvh - 32px);
+
+  margin: 16px 0 16px 16px;
+  padding: clamp(12px, 2vh, 20px) 8px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  background: #ffffff;
+  border: 1px solid #e9ece7;
+  border-radius: 24px;
+
+  box-shadow: 0 4px 20px rgba(52, 92, 74, 0.045);
+
+  box-sizing: border-box;
+  flex-shrink: 0;
+  align-self: flex-start;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  scrollbar-width: none;
+  z-index: 10;
+}
+
+.sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+
+/* ==========================
+   LOGO
+========================== */
+
+.sidebar-logo {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+
+  margin-bottom: clamp(20px, 4vh, 35px);
+}
+
+.logo-icon {
+  height: clamp(38px, 4.5vw, 45px);
+  width: clamp(38px, 4.5vw, 45px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #436e5b;
+  color: #ffffff;
+
+  border-radius: 15px;
+}
+
+
+/* ==========================
+   NAVIGATION
+========================== */
+
+.sidebar-navigation {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.sidebar-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+
+  color: #a0aaa1;
+  text-align: center;
+
+  margin: 0 0 clamp(12px, 2.5vh, 20px);
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: clamp(7px, 1.8vh, 14px);
+}
+
+
+/* ==========================
+   NAVIGATION LINKS
+========================== */
+
+.sidebar-link {
+  position: relative;
+
+  width: clamp(38px, 3.5vw, 46px);
+  height: clamp(38px, 3.5vw, 46px);
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 15px;
+
+  background: transparent;
+  color: #87958b;
+
+  cursor: pointer;
+
+  transition: all 0.25s ease;
+}
+
+.sidebar-link:hover {
+  background: #eaf1eb;
+  color: #345c4a;
+  transform: translateY(-1px);
+}
+
+.sidebar-link.active {
+  background: #345c4a;
+  color: #ffffff;
+
+  box-shadow: 0 5px 12px rgba(52, 92, 74, 0.17);
+}
+
+.sidebar-link.active:hover {
+  background: #294d3c;
+  color: #ffffff;
+}
+
+
+/* ==========================
+   TOOLTIPS
+========================== */
+
+.sidebar-tooltip {
+  position: absolute;
+  left: calc(100% + 12px);
+
+  padding: 8px 12px;
+
+  background: #345c4a;
+  color: #ffffff;
+
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+
+  border-radius: 8px;
+
+  opacity: 0;
+  visibility: hidden;
+
+  transform: translateX(-5px);
+  transition: all 0.2s ease;
+
+  pointer-events: none;
+  z-index: 100;
+}
+
+.sidebar-link:hover .sidebar-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+
+/* ==========================
+   BOTTOM SECTION
+========================== */
+
+.sidebar-bottom {
+  width: 100%;
+
+  margin-top: auto;
+  padding-top: clamp(15px, 3vh, 30px);
+  padding-bottom: 4px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: clamp(7px, 1.5vh, 12px);
+  flex-shrink: 0;
+}
+
+
+/* ==========================
+   PROFILE
+========================== */
+
+.sidebar-profile {
+  width: 46px;
+  height: 46px;
+
+  margin-top: 5px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sidebar-avatar {
+  height: clamp(36px, 3.5vw, 42px);
+  width: clamp(36px, 3.5vw, 42px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #dce8df;
+  color: #345c4a;
+
+  border-radius: 50%;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  border: 2px solid #edf3ee;
+}
+
+.sidebar-profile-menu {
+  position: absolute;
+  bottom: -3px;
+  right: -4px;
+
+  width: 19px;
+  height: 19px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #ffffff;
+  color: #718579;
+
+  border-radius: 50%;
+}
+
+
+/* ==========================
+   SMALL SCREEN HEIGHT
+========================== */
+
+@media (max-height: 700px) {
+  .sidebar {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    border-radius: 20px;
+  }
+
+  .sidebar-logo {
+    margin-bottom: 12px;
+  }
+
+  .sidebar-label {
+    margin-bottom: 8px;
+  }
+
+  .sidebar-menu,
+  .sidebar-bottom {
+    gap: 5px;
+  }
+
+  .sidebar-bottom {
+    padding-top: 10px;
+  }
+
+  .sidebar-link {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .sidebar-profile {
+    width: 40px;
+    height: 40px;
+    margin-top: 2px;
+  }
+}
+
+
+/* ==========================
+   TABLET
+========================== */
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 66px;
+    min-width: 66px;
+    margin-left: 8px;
+    padding-left: 6px;
+    padding-right: 6px;
+    border-radius: 19px;
+  }
+}
+
+
+/* ==========================
+   MOBILE
+========================== */
+
+@media (max-width: 480px) {
+  .sidebar {
+    display: none;
+  }
+}

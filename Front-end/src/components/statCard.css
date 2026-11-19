@@ -1,0 +1,152 @@
+
+/* ==========================
+   STAT CARD
+========================== */
+
+.stat-card {
+  background: #ffffff;
+  border: 1px solid #e8e9e4;
+  border-radius: 17px;
+
+  padding: 20px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+
+  min-width: 0;
+
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+/* Subtle Hover */
+
+.stat-card:hover {
+  border-color: #cbd9ce;
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 6px 18px rgba(52, 92, 74, 0.055);
+}
+
+
+/* ==========================
+   CARD HEADER
+========================== */
+
+.stat-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+
+/* Icon Container */
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+}
+
+
+/* Icon Colour Variants */
+
+.stat-icon.green {
+  background: #e8f0ea;
+  color: #345c4a;
+}
+
+.stat-icon.blue {
+  background: #eaf0f7;
+  color: #708bae;
+}
+
+.stat-icon.gold {
+  background: #f2eee3;
+  color: #9c8958;
+}
+
+
+/* Trend Badge */
+
+.stat-trend {
+  font-size: 10px;
+  font-weight: 600;
+
+  color: #527b60;
+  background: #edf4ed;
+
+  padding: 5px 9px;
+  border-radius: 20px;
+}
+
+
+/* ==========================
+   CARD BODY
+========================== */
+
+.stat-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.stat-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #858e87;
+}
+
+.stat-value {
+  font-size: clamp(24px, 2vw, 29px);
+  font-weight: 650;
+
+  letter-spacing: -1px;
+  line-height: 1.2;
+
+  color: #303b34;
+}
+
+.stat-description {
+  font-size: 11px;
+  color: #a0a8a1;
+  font-weight: 400;
+}
+
+
+/* ==========================
+   RESPONSIVE
+========================== */
+
+@media (max-width: 768px) {
+  .stat-card {
+    padding: 16px;
+    gap: 17px;
+  }
+
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .stat-value {
+    font-size: 23px;
+  }
+}

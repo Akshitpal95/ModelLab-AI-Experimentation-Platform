@@ -1,0 +1,256 @@
+
+.recent-experiments {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+
+  background: #ffffff;
+  border: 1px solid #e6e9e3;
+  border-radius: 18px;
+
+  padding: 24px;
+  margin-top: 22px;
+}
+
+/* Header */
+
+.recent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  margin-bottom: 22px;
+}
+
+.recent-header h3 {
+  margin: 0;
+  color: #283b32;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.4px;
+}
+
+.recent-header p {
+  margin: 6px 0 0;
+  color: #89948d;
+  font-size: 13px;
+}
+
+/* View all button */
+
+.view-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  padding: 9px 13px;
+
+  background: #edf3ee;
+  border: 1px solid #e2ebe4;
+  border-radius: 9px;
+
+  color: #416a55;
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.view-all-btn:hover {
+  background: #e2ece4;
+}
+
+/* Table */
+
+.experiments-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.experiments-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.experiments-table thead {
+  background: #f7f8f5;
+}
+
+.experiments-table th {
+  padding: 13px 14px;
+
+  color: #89948d;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+
+  white-space: nowrap;
+}
+
+.experiments-table td {
+  padding: 17px 14px;
+
+  border-bottom: 1px solid #eff1ed;
+
+  color: #526159;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.experiments-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.experiments-table tbody tr:hover {
+  background: #fafbf9;
+}
+
+.experiments-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Experiment name */
+
+.experiment-name {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.experiment-name span {
+  color: #35483e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.experiment-name small {
+  color: #a0aaa3;
+  font-size: 10px;
+}
+
+/* Dataset */
+
+.dataset-cell {
+  color: #78857c !important;
+}
+
+/* Model tag */
+
+.model-tag {
+  display: inline-block;
+
+  padding: 6px 9px;
+
+  background: #f0f3f7;
+  color: #657e9e;
+
+  border-radius: 7px;
+
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Accuracy */
+
+.accuracy-cell {
+  color: #426d56 !important;
+  font-weight: 700;
+  font-size: 13px !important;
+}
+
+/* Date */
+
+.date-cell {
+  color: #89948d !important;
+}
+
+/* Status */
+
+.experiment-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 9px;
+  border-radius: 20px;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.status-completed {
+  background: #edf4ee;
+  color: #4c795c;
+}
+
+.status-running {
+  background: #f7f0df;
+  color: #a48643;
+}
+
+/* More options */
+
+.experiment-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 30px;
+  width: 30px;
+
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+
+  color: #9aa59d;
+  cursor: pointer;
+}
+
+.experiment-more-btn:hover {
+  background: #edf3ee;
+  color: #416a55;
+}
+
+/* Footer */
+
+.recent-footer {
+  margin-top: 15px;
+  padding-top: 14px;
+
+  border-top: 1px solid #eff1ed;
+
+  color: #9aa49d;
+  font-size: 11px;
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .recent-experiments {
+    padding: 17px;
+  }
+
+  .recent-header {
+    align-items: flex-start;
+  }
+
+  .recent-header h3 {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .recent-header p {
+    max-width: 220px;
+    line-height: 1.5;
+  }
+
+  .view-all-btn {
+    padding: 8px;
+    font-size: 11px;
+  }
+}
