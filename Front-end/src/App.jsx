@@ -11,6 +11,8 @@ import ModelComparison from "./pages/ModelComparison.jsx";
 
 import ExperimentReport from "./pages/ExperimentReport.jsx";
 
+import ExperimentHistory from "./pages/ExperimentHistory.jsx";
+
 
 
 function App() {
@@ -28,7 +30,10 @@ function App() {
         return <ModelComparison />;  
        
       case "report":
-        return <ExperimentReport />;  
+        return <ExperimentReport />; 
+        
+      case "history":
+        return <ExperimentHistory />;  
 
 
 
