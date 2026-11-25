@@ -7,42 +7,37 @@ import {
   Settings2,
   Play,
   Info,
+  LoaderCircle,
 } from "lucide-react";
 
+import { runExperiment } from "../services/experimentService";
 import "./ExperimentStudio.css";
 
 const ExperimentStudio = () => {
-  const [selectedDataset, setSelectedDataset] = useState("Iris Dataset");
-  const [selectedModels, setSelectedModels] = useState([
-    "Logistic Regression",
-  ]);
-  const [testSize, setTestSize] = useState(20);
-  const [randomState, setRandomState] = useState(42);
+  const [selectedModel, setSelectedModel] = useState("Random Forest");
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [results, setResults] = useState(null);
 
   const models = [
-    "Logistic Regression",
-    "Decision Tree",
+    "Linear Regression",
     "Random Forest",
-    "K-Nearest Neighbors",
   ];
 
-  const toggleModel = (model) => {
-    setSelectedModels((previous) =>
-      previous.includes(model)
-        ? previous.filter((item) => item !== model)
-        : [...previous, model]
-    );
-  };
+  const handleRunExperiment = async () => {
+    setLoading(true);
+    setError("");
+    setResults(null);
 
-  const handleRunExperiment = () => {
-    if (selectedModels.length === 0) {
-      alert("Please select at least one model.");
-      return;
+    try {
+      const data = await runExperiment(selectedModel);
+      setResults(data);
+    } catch (err) {
+      setError(err.message || "Failed to run experiment.");
+    } finally {
+      setLoading(false);
     }
-
-    alert(
-      `Experiment configuration saved!\nDataset: ${selectedDataset}\nModels: ${selectedModels.join(", ")}`
-    );
   };
 
   return (
@@ -54,8 +49,8 @@ const ExperimentStudio = () => {
           <span className="section-eyebrow">MODEL WORKSPACE</span>
           <h1>Experiment Studio</h1>
           <p>
-            Configure datasets, select machine learning models,
-            and prepare your experiments.
+            Configure and run machine learning experiments
+            on materials science datasets.
           </p>
         </div>
 
@@ -72,23 +67,18 @@ const ExperimentStudio = () => {
           </div>
 
           <div>
-            <h2>Select Dataset</h2>
-            <p>Choose the dataset you want to experiment with.</p>
+            <h2>Selected Dataset</h2>
+            <p>Materials science experimental dataset.</p>
           </div>
         </div>
 
-        <select
-          className="experiment-select"
-          value={selectedDataset}
-          onChange={(e) => setSelectedDataset(e.target.value)}
-        >
-          <option>Iris Dataset</option>
-          <option>Titanic Dataset</option>
-          <option>Wine Quality</option>
-          <option>Breast Cancer</option>
-          <option>Diabetes Dataset</option>
-          <option>California Housing</option>
-        </select>
+        <div className="experiment-select">
+          Matbench — Experimental Band Gap
+        </div>
+
+        <p className="experiment-selection-count">
+          4,604 materials · Target: Experimental band gap (eV)
+        </p>
       </div>
 
       {/* Model Selection */}
@@ -99,10 +89,8 @@ const ExperimentStudio = () => {
           </div>
 
           <div>
-            <h2>Select Models</h2>
-            <p>
-              Choose one or more algorithms to compare.
-            </p>
+            <h2>Select Model</h2>
+            <p>Choose the regression algorithm to train.</p>
           </div>
         </div>
 
@@ -112,12 +100,17 @@ const ExperimentStudio = () => {
               key={model}
               type="button"
               className={`experiment-model-option ${
-                selectedModels.includes(model) ? "selected" : ""
+                selectedModel === model ? "selected" : ""
               }`}
-              onClick={() => toggleModel(model)}
+              onClick={() => {
+                setSelectedModel(model);
+                setResults(null);
+                setError("");
+              }}
+              disabled={loading}
             >
               <span className="model-check">
-                {selectedModels.includes(model) ? "✓" : "+"}
+                {selectedModel === model ? "✓" : "+"}
               </span>
 
               <span>{model}</span>
@@ -126,7 +119,7 @@ const ExperimentStudio = () => {
         </div>
 
         <p className="experiment-selection-count">
-          {selectedModels.length} model(s) selected
+          Selected: {selectedModel}
         </p>
       </div>
 
@@ -139,42 +132,21 @@ const ExperimentStudio = () => {
 
           <div>
             <h2>Experiment Settings</h2>
-            <p>Configure how your models will be evaluated.</p>
+            <p>Current evaluation configuration.</p>
           </div>
         </div>
 
         <div className="experiment-settings-grid">
           <div className="experiment-setting">
-            <label htmlFor="test-size">
-              Test Size
-              <strong>{testSize}%</strong>
-            </label>
-
-            <input
-              id="test-size"
-              type="range"
-              min="10"
-              max="40"
-              step="5"
-              value={testSize}
-              onChange={(e) => setTestSize(Number(e.target.value))}
-            />
-
-            <small>Percentage of data reserved for testing.</small>
+            <label>Training / Testing Split</label>
+            <strong>80% / 20%</strong>
+            <small>3,683 training samples and 921 test samples.</small>
           </div>
 
           <div className="experiment-setting">
-            <label htmlFor="random-state">Random State</label>
-
-            <input
-              id="random-state"
-              type="number"
-              min="0"
-              value={randomState}
-              onChange={(e) => setRandomState(Number(e.target.value))}
-            />
-
-            <small>Controls reproducibility of the data split.</small>
+            <label>Random State</label>
+            <strong>42</strong>
+            <small>Fixed seed for reproducible experiments.</small>
           </div>
         </div>
       </div>
@@ -183,9 +155,8 @@ const ExperimentStudio = () => {
       <div className="experiment-info">
         <Info size={18} />
         <p>
-          These settings configure your experiment.
-          Actual model training will be enabled after connecting
-          the Python machine-learning backend.
+          Model training will run through the FastAPI backend.
+          Results will be saved automatically in MongoDB.
         </p>
       </div>
 
@@ -194,11 +165,138 @@ const ExperimentStudio = () => {
         <button
           className="run-experiment-btn"
           onClick={handleRunExperiment}
+          disabled={loading}
         >
-          <Play size={17} />
-          Prepare Experiment
+          {loading ? (
+            <>
+              <LoaderCircle size={17} className="spin" />
+              Training Model...
+            </>
+          ) : (
+            <>
+              <Play size={17} />
+              Run Experiment
+            </>
+          )}
         </button>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="experiment-info" role="alert">
+          <Info size={18} />
+          <p>{error}</p>
+        </div>
+      )}
+
+      {/* Results */}
+      {results && (
+        <div className="experiment-section">
+
+          <div className="experiment-section-heading">
+            <div className="experiment-section-icon">
+              <BrainCircuit size={19} />
+            </div>
+
+            <div>
+              <h2>Experiment Results</h2>
+              <p>{results.model_name} completed successfully.</p>
+            </div>
+          </div>
+
+          <div className="experiment-settings-grid">
+            <div className="experiment-setting">
+              <label>MAE</label>
+              <strong>{results.metrics.mae.toFixed(4)}</strong>
+            </div>
+
+            <div className="experiment-setting">
+              <label>RMSE</label>
+              <strong>{results.metrics.rmse.toFixed(4)}</strong>
+            </div>
+
+            <div className="experiment-setting">
+              <label>R² Score</label>
+              <strong>{results.metrics.r2_score.toFixed(4)}</strong>
+            </div>
+
+            <div className="experiment-setting">
+              <label>Features</label>
+              <strong>{results.dataset.feature_count}</strong>
+            </div>
+          </div>
+
+          <p className="experiment-selection-count">
+            Experiment ID: {results.experiment_id}
+          </p>
+
+          <h3>Actual vs Predicted</h3>
+
+          <div style={{ overflowX: "auto" }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Actual (eV)</th>
+                  <th>Predicted (eV)</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {results.predictions.map((item, index) => (
+                  <tr key={index}>
+                    <td>{item.actual.toFixed(4)}</td>
+                    <td>{item.predicted.toFixed(4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {results.feature_importance && (
+            <>
+              <h3>Top Feature Importance</h3>
+
+              {Object.entries(results.feature_importance).map(
+                ([feature, importance]) => (
+                  <div key={feature} style={{ marginBottom: "12px" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: "12px",
+                        fontSize: "13px",
+                        marginBottom: "5px",
+                      }}
+                    >
+                      <span>{feature}</span>
+                      <strong>{importance.toFixed(4)}</strong>
+                    </div>
+
+                    <div
+                      style={{
+                        height: "7px",
+                        background: "#e8e8e8",
+                        borderRadius: "10px",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${Math.min(importance * 100, 100)}%`,
+                          background: "#789b83",
+                          borderRadius: "10px",
+                        }}
+                      />
+                    </div>
+                  </div>
+                )
+              )}
+            </>
+          )}
+
+        </div>
+      )}
 
     </section>
   );

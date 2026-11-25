@@ -3,54 +3,27 @@ import React from "react";
 import {
   ArrowUpRight,
   CheckCircle2,
-  Clock3,
   MoreHorizontal,
 } from "lucide-react";
 
 import "./RecentExperiments.css";
 
-// Temporary mock data.
-// Later, these records will come from our Python backend.
-const experiments = [
-  {
-    id: "EXP-024",
-    name: "Customer Churn Prediction",
-    dataset: "Telco Customer Churn",
-    model: "Logistic Regression",
-    accuracy: "96.5%",
-    date: "18 Nov, 2026",
-    status: "Completed",
-  },
-  {
-    id: "EXP-023",
-    name: "Iris Classification",
-    dataset: "Iris Dataset",
-    model: "Decision Tree",
-    accuracy: "94.2%",
-    date: "17 Nov, 2026",
-    status: "Completed",
-  },
-  {
-    id: "EXP-022",
-    name: "Wine Quality Analysis",
-    dataset: "Wine Quality",
-    model: "Logistic Regression",
-    accuracy: "89.8%",
-    date: "16 Nov, 2026",
-    status: "Completed",
-  },
-  {
-    id: "EXP-021",
-    name: "Breast Cancer Detection",
-    dataset: "Breast Cancer Wisconsin",
-    model: "Decision Tree",
-    accuracy: "—",
-    date: "18 Nov, 2026",
-    status: "Running",
-  },
-];
+const RecentExperiments = ({ experiments = [] }) => {
 
-const RecentExperiments = () => {
+  // Display only the latest 4 experiments.
+  const recentExperiments = experiments.slice(0, 4);
+
+  // Format backend date into a readable date.
+  const formatDate = (dateString) => {
+    if (!dateString) return "—";
+
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
   return (
     <section className="recent-experiments">
 
@@ -78,7 +51,7 @@ const RecentExperiments = () => {
               <th>Experiment</th>
               <th>Dataset</th>
               <th>Model</th>
-              <th>Accuracy</th>
+              <th>R² Score</th>
               <th>Last Run</th>
               <th>Status</th>
               <th></th>
@@ -86,63 +59,66 @@ const RecentExperiments = () => {
           </thead>
 
           <tbody>
-            {experiments.map((experiment) => (
-              <tr key={experiment.id}>
+            {recentExperiments.length > 0 ? (
+              recentExperiments.map((experiment) => (
 
-                <td>
-                  <div className="experiment-name">
-                    <span>{experiment.name}</span>
-                    <small>{experiment.id}</small>
-                  </div>
-                </td>
+                <tr key={experiment._id}>
 
-                <td className="dataset-cell">
-                  {experiment.dataset}
-                </td>
+                  <td>
+                    <div className="experiment-name">
+                      <span>{experiment.model_name}</span>
+                      <small>
+                        {experiment._id.slice(-8).toUpperCase()}
+                      </small>
+                    </div>
+                  </td>
 
-                <td>
-                  <span className="model-tag">
-                    {experiment.model}
-                  </span>
-                </td>
+                  <td className="dataset-cell">
+                    {experiment.dataset_name}
+                  </td>
 
-                <td className="accuracy-cell">
-                  {experiment.accuracy}
-                </td>
+                  <td>
+                    <span className="model-tag">
+                      {experiment.model_name}
+                    </span>
+                  </td>
 
-                <td className="date-cell">
-                  {experiment.date}
-                </td>
+                  <td className="accuracy-cell">
+                    {typeof experiment.r2_score === "number"
+                      ? experiment.r2_score.toFixed(4)
+                      : "—"}
+                  </td>
 
-                <td>
-                  <span
-                    className={`experiment-status ${
-                      experiment.status === "Completed"
-                        ? "status-completed"
-                        : "status-running"
-                    }`}
-                  >
-                    {experiment.status === "Completed" ? (
+                  <td className="date-cell">
+                    {formatDate(experiment.created_at)}
+                  </td>
+
+                  <td>
+                    <span className="experiment-status status-completed">
                       <CheckCircle2 size={13} />
-                    ) : (
-                      <Clock3 size={13} />
-                    )}
+                      Completed
+                    </span>
+                  </td>
 
-                    {experiment.status}
-                  </span>
+                  <td>
+                    <button
+                      className="experiment-more-btn"
+                      aria-label={`More options for ${experiment.model_name}`}
+                    >
+                      <MoreHorizontal size={19} />
+                    </button>
+                  </td>
+
+                </tr>
+
+              ))
+            ) : (
+              <tr>
+                <td colSpan="7" style={{ textAlign: "center", padding: "30px" }}>
+                  No experiments found.
                 </td>
-
-                <td>
-                  <button
-                    className="experiment-more-btn"
-                    aria-label={`More options for ${experiment.name}`}
-                  >
-                    <MoreHorizontal size={19} />
-                  </button>
-                </td>
-
               </tr>
-            ))}
+            )}
           </tbody>
 
         </table>
@@ -150,7 +126,7 @@ const RecentExperiments = () => {
 
       {/* Footer */}
       <div className="recent-footer">
-        Showing {experiments.length} recent experiments
+        Showing {recentExperiments.length} of {experiments.length} experiments
       </div>
 
     </section>

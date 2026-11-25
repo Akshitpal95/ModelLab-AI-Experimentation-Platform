@@ -1,64 +1,69 @@
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { getExperiments } from "../services/experimentService";
 import "./ExperimentHistory.css";
 
-const historyData = [
-  {
-    id: "EXP-001",
-    title: "Iris Classification Experiment",
-    dataset: "Iris Dataset",
-    task: "Classification",
-    models: ["Logistic Regression", "Decision Tree"],
-    date: "19 Nov 2026",
-    status: "Demo",
-    description:
-      "A sample experiment exploring how different classification algorithms can be used to classify iris flower species.",
-  },
-  {
-    id: "EXP-002",
-    title: "Titanic Survival Prediction",
-    dataset: "Titanic Dataset",
-    task: "Classification",
-    models: ["Random Forest", "Logistic Regression"],
-    date: "18 Nov 2026",
-    status: "Demo",
-    description:
-      "A sample experiment exploring passenger information as features for a survival prediction task.",
-  },
-  {
-    id: "EXP-003",
-    title: "Wine Quality Analysis",
-    dataset: "Wine Quality",
-    task: "Classification",
-    models: ["Decision Tree", "K-Nearest Neighbors"],
-    date: "17 Nov 2026",
-    status: "Demo",
-    description:
-      "A sample experiment demonstrating how machine learning models can be applied to wine quality data.",
-  },
-  {
-    id: "EXP-004",
-    title: "Breast Cancer Classification",
-    dataset: "Breast Cancer Dataset",
-    task: "Classification",
-    models: ["Logistic Regression", "Random Forest"],
-    date: "16 Nov 2026",
-    status: "Demo",
-    description:
-      "A sample experiment showing a possible classification workflow using diagnostic dataset features.",
-  },
-];
-
 const ExperimentHistory = () => {
+  const [historyData, setHistoryData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [expandedId, setExpandedId] = useState(null);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Fetch experiment history from FastAPI
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const data = await getExperiments();
+
+        const formattedExperiments = data.experiments.map((experiment) => ({
+          id: experiment._id,
+          displayId: `EXP-${experiment._id.slice(-6)}`,
+          title: `${experiment.model_name} Experiment`,
+          dataset: experiment.dataset_name,
+          task: "Regression",
+          models: [experiment.model_name],
+          date: experiment.created_at
+            ? new Date(experiment.created_at).toLocaleString()
+            : "Date unavailable",
+          status: "Completed",
+          description: `Model trained to predict ${experiment.target_column} using ${experiment.feature_count} features.`,
+          target: experiment.target_column,
+          featureCount: experiment.feature_count,
+          trainSize: experiment.train_size,
+          testSize: experiment.test_size,
+          mae: experiment.mae,
+          rmse: experiment.rmse,
+          r2Score: experiment.r2_score,
+          randomState: experiment.random_state,
+          modelParams: experiment.model_params,
+        }));
+
+        setHistoryData(formattedExperiments);
+      } catch (err) {
+        setError(err.message || "Unable to load experiment history.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHistory();
+  }, []);
+
+  // Search and filter experiments
   const filteredExperiments = historyData.filter((experiment) => {
     const matchesSearch =
       experiment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       experiment.dataset.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      experiment.id.toLowerCase().includes(searchTerm.toLowerCase());
+      experiment.displayId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      experiment.models.some((model) =>
+        model.toLowerCase().includes(searchTerm.toLowerCase())
+      );
 
     const matchesFilter =
       selectedFilter === "All" || experiment.task === selectedFilter;
@@ -72,6 +77,8 @@ const ExperimentHistory = () => {
 
   return (
     <div className="history-page">
+
+      {/* Page Header */}
       <div className="history-header">
         <div>
           <p className="history-eyebrow">WORKSPACE / EXPERIMENTS</p>
@@ -87,14 +94,23 @@ const ExperimentHistory = () => {
         </div>
       </div>
 
-      <div className="history-notice">
-        <span className="notice-dot"></span>
-        <p>
-          These are sample history records for interface demonstration.
-          Actual experiment history will appear here after backend integration.
-        </p>
-      </div>
+      {/* Loading */}
+      {loading && (
+        <div className="history-notice">
+          <span className="notice-dot"></span>
+          <p>Loading experiment history...</p>
+        </div>
+      )}
 
+      {/* Error */}
+      {error && (
+        <div className="history-notice">
+          <span className="notice-dot"></span>
+          <p>{error}</p>
+        </div>
+      )}
+
+      {/* Search and Filter */}
       <div className="history-toolbar">
         <div className="history-search">
           <span>⌕</span>
@@ -112,32 +128,37 @@ const ExperimentHistory = () => {
           className="history-filter"
         >
           <option value="All">All task types</option>
-          <option value="Classification">Classification</option>
           <option value="Regression">Regression</option>
         </select>
       </div>
 
+      {/* Experiment List */}
       <div className="history-list">
-        {filteredExperiments.length > 0 ? (
+        {!loading && !error && filteredExperiments.length > 0 ? (
           filteredExperiments.map((experiment) => (
             <div className="history-card" key={experiment.id}>
+
               <div className="history-card-main">
                 <div className="history-card-icon">ML</div>
 
                 <div className="history-card-content">
                   <div className="history-title-row">
                     <h3>{experiment.title}</h3>
-                    <span className="history-status">{experiment.status}</span>
+                    <span className="history-status">
+                      {experiment.status}
+                    </span>
                   </div>
 
                   <p className="history-dataset">
-                    {experiment.dataset} <span>·</span> {experiment.id}
+                    {experiment.dataset}
+                    <span> · </span>
+                    {experiment.displayId}
                   </p>
 
                   <div className="history-meta">
                     <span>{experiment.task}</span>
                     <span>{experiment.date}</span>
-                    <span>{experiment.models.length} models</span>
+                    <span>{experiment.models.length} model</span>
                   </div>
                 </div>
 
@@ -145,35 +166,69 @@ const ExperimentHistory = () => {
                   className="history-details-button"
                   onClick={() => toggleDetails(experiment.id)}
                 >
-                  {expandedId === experiment.id ? "Hide details" : "View details"}
-                  <span>{expandedId === experiment.id ? "−" : "+"}</span>
+                  {expandedId === experiment.id
+                    ? "Hide details"
+                    : "View details"}
+                  <span>
+                    {expandedId === experiment.id ? "−" : "+"}
+                  </span>
                 </button>
               </div>
 
+              {/* Expanded Details */}
               {expandedId === experiment.id && (
                 <div className="history-expanded">
+
                   <div>
                     <h4>Experiment objective</h4>
                     <p>{experiment.description}</p>
                   </div>
 
                   <div>
-                    <h4>Algorithms selected</h4>
+                    <h4>Algorithm</h4>
                     <div className="history-model-tags">
                       {experiment.models.map((model) => (
                         <span key={model}>{model}</span>
                       ))}
                     </div>
                   </div>
+
+                  <div>
+                    <h4>Evaluation Metrics</h4>
+                    <p>MAE: {experiment.mae.toFixed(4)}</p>
+                    <p>RMSE: {experiment.rmse.toFixed(4)}</p>
+                    <p>R² Score: {experiment.r2Score.toFixed(4)}</p>
+                  </div>
+
+                  <div>
+                    <h4>Dataset Configuration</h4>
+                    <p>Target: {experiment.target}</p>
+                    <p>Features: {experiment.featureCount}</p>
+                    <p>Training samples: {experiment.trainSize}</p>
+                    <p>Testing samples: {experiment.testSize}</p>
+                    <p>Random state: {experiment.randomState}</p>
+                  </div>
+
+                  <div>
+                    <h4>Model Parameters</h4>
+                    <pre style={{ whiteSpace: "pre-wrap", fontSize: "12px" }}>
+                      {JSON.stringify(experiment.modelParams, null, 2)}
+                    </pre>
+                  </div>
+
                 </div>
               )}
             </div>
           ))
         ) : (
-          <div className="history-empty">
-            <h3>No experiments found</h3>
-            <p>Try changing your search term or task type filter.</p>
-          </div>
+          !loading && !error && (
+            <div className="history-empty">
+              <h3>No experiments found</h3>
+              <p>
+                Try changing your search term or task type filter.
+              </p>
+            </div>
+          )
         )}
       </div>
     </div>

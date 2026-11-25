@@ -1,12 +1,14 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 import WelcomeBanner from "../components/WelcomeBanner";
 import StatCard from "../components/StatCard";
 import ComparisonChart from "../components/ComparisonChart";
-
-import { modelComparisonData } from "../data/mockResults";
 import RecentExperiments from "../components/RecentExperiments.jsx";
+
+
+
+import { getExperiments } from "../services/experimentService";
 
 import {
   FlaskConical,
@@ -17,25 +19,73 @@ import {
 
 import "./Dashboard.css";
 
-
 const Dashboard = () => {
+  const [experiments, setExperiments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Dashboard statistics
+  useEffect(() => {
+    const fetchExperiments = async () => {
+      try {
+        const data = await getExperiments();
+
+        setExperiments(data.experiments || []);
+      } catch (err) {
+        console.error("Dashboard API Error:", err);
+        setError("Unable to load experiment statistics.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExperiments();
+  }, []);
+
+  // Calculate dashboard statistics from actual experiment records.
+  const bestExperiment = experiments.reduce((best, current) => {
+    if (
+      typeof current.r2_score !== "number" ||
+      !Number.isFinite(current.r2_score)
+    ) {
+      return best;
+    }
+
+    if (!best || current.r2_score > best.r2_score) {
+      return current;
+    }
+
+    return best;
+  }, null);
+
+  const uniqueDatasets = new Set(
+    experiments.map((experiment) => experiment.dataset_name)
+  );
+
+  const uniqueModels = new Set(
+    experiments.map((experiment) => experiment.model_name)
+  );
+
   const stats = [
     {
       id: 1,
       title: "Total Experiments",
-      value: "24",
+      value: loading ? "..." : experiments.length,
       description: "Across all experiments",
       icon: FlaskConical,
-      trend: "+4.2%",
+      trend: "Saved runs",
       tone: "green",
     },
     {
       id: 2,
-      title: "Best Accuracy",
-      value: "96.5%",
-      description: "Logistic Regression",
+      title: "Best R² Score",
+      value: loading
+        ? "..."
+        : bestExperiment
+          ? bestExperiment.r2_score.toFixed(4)
+          : "—",
+      description: bestExperiment
+        ? bestExperiment.model_name
+        : "No results yet",
       icon: Trophy,
       trend: "Best result",
       tone: "blue",
@@ -43,57 +93,51 @@ const Dashboard = () => {
     {
       id: 3,
       title: "Datasets Used",
-      value: "06",
-      description: "Public datasets",
+      value: loading ? "..." : uniqueDatasets.size,
+      description: "Unique datasets",
       icon: Database,
-      trend: "Available",
+      trend: "From database",
       tone: "gold",
     },
     {
       id: 4,
-      title: "Models Compared",
-      value: "12",
-      description: "Model evaluations",
+      title: "Models Trained",
+      value: loading ? "..." : uniqueModels.size,
+      description: "Unique model types",
       icon: BrainCircuit,
-      trend: "2 types",
+      trend: "Evaluated",
       tone: "green",
     },
   ];
 
-
   return (
     <section className="dashboard">
 
-      {/* Welcome Section */}
       <WelcomeBanner />
 
+      {error && (
+        <p className="dashboard-error">{error}</p>
+      )}
 
-      {/* Statistics Cards */}
       <div className="stats-grid">
-
         {stats.map((stat) => (
           <StatCard
             key={stat.id}
             {...stat}
           />
         ))}
-
       </div>
 
-
-      {/* Model Performance Comparison */}
       <div className="dashboard-chart-section">
+  <ComparisonChart
+    experiments={experiments}
+  />
+</div>
 
-        <ComparisonChart
-          data={modelComparisonData}
-        />
+      <RecentExperiments experiments={experiments} />
 
-      </div>
-      {/* Recent Experiments */}
-      <RecentExperiments />
     </section>
   );
 };
-
 
 export default Dashboard;

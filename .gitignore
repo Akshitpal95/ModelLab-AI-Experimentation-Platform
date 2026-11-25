@@ -1,0 +1,24 @@
+
+# Python installation and environments
+Back-end/Python-3.12.16/
+Back-end/venv/
+Back-end/.venv/
+**/__pycache__/
+*.pyc
+
+# Sensitive credentials
+Back-end/atlas-credentials.env
+.env
+.env.*
+
+# Generated outputs
+Back-end/actual_vs_predicted.png
+Back-end/feature_importance.png
+
+# VS Code
+.vscode/
+
+# React dependencies and builds
+**/node_modules/
+Front-end/dist/
+Front-end/build/

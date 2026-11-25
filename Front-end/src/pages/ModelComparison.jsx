@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ChartNoAxesCombined,
   Trophy,
@@ -10,6 +10,7 @@ import {
   Layers3,
   TrendingUp,
   Info,
+  RefreshCw,
 } from "lucide-react";
 
 import {
@@ -21,87 +22,259 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
 } from "recharts";
 
+import { getExperiments } from "../services/experimentService";
 import "./ModelComparison.css";
 
+const metrics = [
+  { key: "mae", label: "MAE", direction: "lower" },
+  { key: "rmse", label: "RMSE", direction: "lower" },
+  { key: "r2_score", label: "R² Score", direction: "higher" },
+];
+
+const formatMetric = (value) => {
+  return Number.isFinite(value) ? value.toFixed(4) : "—";
+};
+
+const getMetricValue = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const number = Number(value);
+
+  return Number.isFinite(number) ? number : null;
+};
+
 const ModelComparison = () => {
-  const [selectedMetric, setSelectedMetric] = useState("accuracy");
+  const [historyData, setHistoryData] = useState([]);
+  const [selectedMetric, setSelectedMetric] = useState("r2_score");
 
-  // Temporary sample data.
-  // These values will later come from the Python ML backend.
-  const models = [
-    {
-      name: "Logistic Regression",
-      accuracy: 96.7,
-      precision: 96.2,
-      recall: 96.0,
-      f1: 96.1,
-    },
-    {
-      name: "Decision Tree",
-      accuracy: 93.3,
-      precision: 92.8,
-      recall: 93.0,
-      f1: 92.9,
-    },
-    {
-      name: "Random Forest",
-      accuracy: 96.7,
-      precision: 96.5,
-      recall: 96.4,
-      f1: 96.4,
-    },
-    {
-      name: "K-Nearest Neighbors",
-      accuracy: 95.0,
-      precision: 94.8,
-      recall: 94.6,
-      f1: 94.7,
-    },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const metrics = [
-    { key: "accuracy", label: "Accuracy" },
-    { key: "precision", label: "Precision" },
-    { key: "recall", label: "Recall" },
-    { key: "f1", label: "F1 Score" },
-  ];
+  // Fetch actual experiment records from MongoDB through FastAPI
+  const fetchExperiments = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-  const bestModel = [...models].sort(
-    (a, b) => b[selectedMetric] - a[selectedMetric]
-  )[0];
+      const data = await getExperiments();
 
+      if (!Array.isArray(data.experiments)) {
+        throw new Error("Invalid experiment history response.");
+      }
+
+      setHistoryData(data.experiments);
+    } catch (err) {
+      setError(
+        err.message || "Unable to load experiment comparison data."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExperiments();
+  }, []);
+
+  // Select the latest experiment for each model
+  const models = useMemo(() => {
+    const sortedExperiments = [...historyData].sort((a, b) => {
+      return (
+        new Date(b.created_at || 0).getTime() -
+        new Date(a.created_at || 0).getTime()
+      );
+    });
+
+    const latestModels = new Map();
+
+    sortedExperiments.forEach((experiment) => {
+      const modelName = experiment.model_name?.trim();
+
+      if (!modelName || latestModels.has(modelName)) {
+        return;
+      }
+
+      latestModels.set(modelName, {
+        id: experiment._id,
+        name: modelName,
+        dataset: experiment.dataset_name || "Unknown dataset",
+        target: experiment.target_column || "Unknown target",
+        date: experiment.created_at,
+        featureCount: experiment.feature_count,
+        trainSize: experiment.train_size,
+        testSize: experiment.test_size,
+        randomState: experiment.random_state,
+
+        mae: getMetricValue(experiment.mae),
+        rmse: getMetricValue(experiment.rmse),
+        r2_score: getMetricValue(experiment.r2_score),
+      });
+    });
+
+    return Array.from(latestModels.values());
+  }, [historyData]);
+
+  // Current selected metric
+  const activeMetric = metrics.find(
+    (metric) => metric.key === selectedMetric
+  );
+
+  // Models with a valid value for the selected metric
+  const validModels = models.filter((model) =>
+    Number.isFinite(model[selectedMetric])
+  );
+
+  // Determine the best model
+  const bestModel = validModels.reduce((best, current) => {
+    if (!best) return current;
+
+    if (activeMetric.direction === "lower") {
+      return current[selectedMetric] < best[selectedMetric]
+        ? current
+        : best;
+    }
+
+    return current[selectedMetric] > best[selectedMetric]
+      ? current
+      : best;
+  }, null);
+
+  // Calculate average metric
   const averageScore =
-    models.reduce((total, model) => total + model[selectedMetric], 0) /
-    models.length;
+    validModels.length > 0
+      ? validModels.reduce(
+          (total, model) => total + model[selectedMetric],
+          0
+        ) / validModels.length
+      : null;
 
-  const chartData = models.map((model) => ({
+  // Dataset context
+  const datasets = [...new Set(models.map((model) => model.dataset))];
+  const targets = [...new Set(models.map((model) => model.target))];
+
+  const isComparable =
+    datasets.length <= 1 && targets.length <= 1;
+
+  // Main chart data
+  const mainChartData = validModels.map((model) => ({
     name: model.name,
-    Accuracy: model.accuracy,
-    Precision: model.precision,
-    Recall: model.recall,
-    "F1 Score": model.f1,
+    score: model[selectedMetric],
   }));
 
-  const metricLabel =
-    metrics.find((metric) => metric.key === selectedMetric)?.label;
+  // Error metric chart data
+  const errorChartData = models
+    .filter(
+      (model) =>
+        Number.isFinite(model.mae) &&
+        Number.isFinite(model.rmse)
+    )
+    .map((model) => ({
+      name: model.name,
+      MAE: model.mae,
+      RMSE: model.rmse,
+    }));
+
+  // R² chart data
+  const r2ChartData = models
+    .filter((model) => Number.isFinite(model.r2_score))
+    .map((model) => ({
+      name: model.name,
+      "R² Score": model.r2_score,
+    }));
+
+  // Loading state
+  if (loading) {
+    return (
+      <section className="model-comparison">
+        <div className="comparison-note">
+          <Info size={17} />
+          <p>Loading experiment comparison data from MongoDB...</p>
+        </div>
+      </section>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <section className="model-comparison">
+        <div className="comparison-header">
+          <div>
+            <span className="section-eyebrow">
+              ANALYSIS WORKSPACE
+            </span>
+            <h1>Model Comparison</h1>
+            <p>Compare your machine learning experiments.</p>
+          </div>
+        </div>
+
+        <div className="comparison-note">
+          <Info size={17} />
+          <p>{error}</p>
+        </div>
+
+        <button
+          className="metric-selector"
+          onClick={fetchExperiments}
+        >
+          <RefreshCw size={15} />
+          Retry loading experiments
+        </button>
+      </section>
+    );
+  }
+
+  // Empty state
+  if (models.length === 0) {
+    return (
+      <section className="model-comparison">
+        <div className="comparison-header">
+          <div>
+            <span className="section-eyebrow">
+              ANALYSIS WORKSPACE
+            </span>
+            <h1>Model Comparison</h1>
+            <p>
+              Compare evaluation results from your machine learning
+              experiments.
+            </p>
+          </div>
+
+          <div className="comparison-header-icon">
+            <ChartNoAxesCombined size={25} />
+          </div>
+        </div>
+
+        <div className="comparison-note">
+          <Info size={17} />
+          <p>
+            No saved experiments found. Run an experiment in
+            Experiment Studio to start comparing models.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="model-comparison">
+
       {/* Page Header */}
       <div className="comparison-header">
         <div>
-          <span className="section-eyebrow">ANALYSIS WORKSPACE</span>
+          <span className="section-eyebrow">
+            ANALYSIS WORKSPACE
+          </span>
+
           <h1>Model Comparison</h1>
+
           <p>
-            Understand model performance, compare evaluation metrics,
-            and identify the strongest algorithm.
+            Compare actual machine learning results and identify
+            the strongest performing algorithm.
           </p>
         </div>
 
@@ -112,13 +285,20 @@ const ModelComparison = () => {
 
       {/* Dataset Context */}
       <div className="comparison-context">
+
         <div className="context-item">
           <span className="context-label">
             <Database size={14} />
             Selected Dataset
           </span>
-          <strong>Iris Dataset</strong>
-          <small>Classification task</small>
+
+          <strong>
+            {datasets.length === 1
+              ? datasets[0]
+              : "Multiple Datasets"}
+          </strong>
+
+          <small>Materials science dataset</small>
         </div>
 
         <div className="context-item">
@@ -126,8 +306,10 @@ const ModelComparison = () => {
             <Layers3 size={14} />
             Models Evaluated
           </span>
+
           <strong>{models.length} Models</strong>
-          <small>Algorithms in this comparison</small>
+
+          <small>Latest saved run per algorithm</small>
         </div>
 
         <div className="context-item">
@@ -135,66 +317,111 @@ const ModelComparison = () => {
             <Activity size={14} />
             Evaluation Metric
           </span>
-          <strong>{metricLabel}</strong>
-          <small>Currently selected metric</small>
+
+          <strong>{activeMetric.label}</strong>
+
+          <small>
+            {activeMetric.direction === "lower"
+              ? "Lower values are better"
+              : "Higher values are better"}
+          </small>
         </div>
+
       </div>
 
       {/* KPI Cards */}
       <div className="comparison-kpi-grid">
+
         <div className="comparison-kpi">
           <div className="kpi-top">
-            <span>Best Model Score</span>
+            <span>Best Model</span>
+
             <div className="kpi-icon green">
               <Trophy size={18} />
             </div>
           </div>
-          <strong>{bestModel[selectedMetric].toFixed(1)}%</strong>
-          <small>{bestModel.name}</small>
+
+          <strong className="kpi-metric-name">
+            {bestModel ? bestModel.name : "—"}
+          </strong>
+
+          <small>
+            {bestModel
+              ? `${activeMetric.label}: ${formatMetric(
+                  bestModel[selectedMetric]
+                )}`
+              : "No valid metric available"}
+          </small>
         </div>
 
         <div className="comparison-kpi">
           <div className="kpi-top">
-            <span>Average Score</span>
+            <span>Average Metric</span>
+
             <div className="kpi-icon blue">
               <Gauge size={18} />
             </div>
           </div>
-          <strong>{averageScore.toFixed(1)}%</strong>
-          <small>Across all evaluated models</small>
+
+          <strong>
+            {formatMetric(averageScore)}
+          </strong>
+
+          <small>Average {activeMetric.label}</small>
         </div>
 
         <div className="comparison-kpi">
           <div className="kpi-top">
             <span>Models Compared</span>
+
             <div className="kpi-icon purple">
               <Layers3 size={18} />
             </div>
           </div>
+
           <strong>{models.length}</strong>
-          <small>Machine learning algorithms</small>
+
+          <small>Unique algorithms</small>
         </div>
 
         <div className="comparison-kpi">
           <div className="kpi-top">
             <span>Current Metric</span>
+
             <div className="kpi-icon orange">
               <Target size={18} />
             </div>
           </div>
-          <strong className="kpi-metric-name">{metricLabel}</strong>
-          <small>Used for ranking models</small>
+
+          <strong className="kpi-metric-name">
+            {activeMetric.label}
+          </strong>
+
+          <small>
+            {activeMetric.direction === "lower"
+              ? "Lower is better"
+              : "Higher is better"}
+          </small>
         </div>
+
       </div>
 
       {/* Main Performance Chart */}
       <div className="comparison-panel">
+
         <div className="panel-heading">
           <div>
             <h2>Model Performance</h2>
-            <p>Compare individual model scores using the selected metric.</p>
+
+            <p>
+              Compare actual experiment results using the
+              selected evaluation metric.
+            </p>
           </div>
-          <span className="panel-tag">Score · %</span>
+
+          <span className="panel-tag">
+            {activeMetric.label}
+          </span>
         </div>
 
         <div className="metric-selector">
@@ -212,298 +439,363 @@ const ModelComparison = () => {
         </div>
 
         <div className="main-chart-container">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={models.map((model) => ({
-                name: model.name,
-                score: model[selectedMetric],
-              }))}
-              layout="vertical"
-              margin={{ top: 8, right: 35, left: 15, bottom: 8 }}
-              barCategoryGap="30%"
-            >
-              <CartesianGrid
-                stroke="#edf0eb"
-                horizontal={false}
-                strokeDasharray="3 3"
-              />
 
-              <XAxis
-                type="number"
-                domain={[0, 100]}
-                tick={{ fill: "#849087", fontSize: 12 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => `${value}%`}
-              />
-
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={145}
-                tick={{ fill: "#526158", fontSize: 12 }}
-                tickLine={false}
-                axisLine={false}
-              />
-
-              <Tooltip
-                formatter={(value) => [`${value}%`, metricLabel]}
-                contentStyle={{
-                  borderRadius: "10px",
-                  border: "1px solid #e5ebe4",
-                  fontSize: "12px",
+          {mainChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={mainChartData}
+                layout="vertical"
+                margin={{
+                  top: 8,
+                  right: 40,
+                  left: 15,
+                  bottom: 8,
                 }}
-              />
+                barCategoryGap="30%"
+              >
+                <CartesianGrid
+                  stroke="#edf0eb"
+                  horizontal={false}
+                  strokeDasharray="3 3"
+                />
 
-              <Bar
-                dataKey="score"
-                fill="#73977d"
-                radius={[0, 7, 7, 0]}
-                barSize={25}
-                label={{
-                  position: "right",
-                  fill: "#40564a",
-                  fontSize: 12,
-                  formatter: (value) => `${value}%`,
-                }}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+                <XAxis
+                  type="number"
+                  domain={["auto", "auto"]}
+                  tick={{ fill: "#849087", fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={145}
+                  tick={{ fill: "#526158", fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+
+                <Tooltip
+                  formatter={(value) => [
+                    formatMetric(value),
+                    activeMetric.label,
+                  ]}
+                  contentStyle={{
+                    borderRadius: "10px",
+                    border: "1px solid #e5ebe4",
+                    fontSize: "12px",
+                  }}
+                />
+
+                <Bar
+                  dataKey="score"
+                  fill="#73977d"
+                  radius={[0, 7, 7, 0]}
+                  barSize={25}
+                  label={{
+                    position: "right",
+                    fill: "#40564a",
+                    fontSize: 12,
+                    formatter: (value) => formatMetric(value),
+                  }}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p>No valid values for this metric.</p>
+          )}
+
         </div>
 
         <div className="chart-caption">
           <Info size={15} />
+
           <span>
-            Higher scores indicate better performance for this metric.
+            {activeMetric.direction === "lower"
+              ? "Lower values indicate better performance."
+              : "Higher values indicate better performance."}
           </span>
         </div>
+
       </div>
 
-      {/* Two Additional Charts */}
+      {/* Additional Charts */}
       <div className="comparison-chart-grid">
+
+        {/* MAE and RMSE */}
         <div className="comparison-panel secondary-panel">
+
           <div className="panel-heading">
             <div>
-              <h2>Metric Breakdown</h2>
-              <p>Compare all evaluation metrics across models.</p>
+              <h2>Error Metrics</h2>
+
+              <p>
+                Compare MAE and RMSE across trained models.
+                Lower values are better.
+              </p>
             </div>
+
             <div className="mini-panel-icon blue">
               <ChartNoAxesCombined size={18} />
             </div>
           </div>
 
           <div className="secondary-chart-container">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{ top: 10, right: 10, left: -15, bottom: 5 }}
-                barGap={3}
-              >
-                <CartesianGrid
-                  stroke="#edf0eb"
-                  vertical={false}
-                  strokeDasharray="3 3"
-                />
 
-                <XAxis
-                  dataKey="name"
-                  tick={{ fill: "#718078", fontSize: 10 }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={0}
-                  angle={-12}
-                  textAnchor="end"
-                  height={65}
-                />
-
-                <YAxis
-                  domain={[85, 100]}
-                  tick={{ fill: "#849087", fontSize: 10 }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${value}%`}
-                />
-
-                <Tooltip
-                  formatter={(value) => `${value}%`}
-                  contentStyle={{
-                    borderRadius: "10px",
-                    border: "1px solid #e5ebe4",
-                    fontSize: "11px",
+            {errorChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={errorChartData}
+                  margin={{
+                    top: 10,
+                    right: 10,
+                    left: -15,
+                    bottom: 5,
                   }}
-                />
+                  barGap={5}
+                >
+                  <CartesianGrid
+                    stroke="#edf0eb"
+                    vertical={false}
+                    strokeDasharray="3 3"
+                  />
 
-                <Legend
-                  wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }}
-                />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: "#718078", fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval={0}
+                  />
 
-                <Bar dataKey="Accuracy" fill="#72977c" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Precision" fill="#7d9fc0" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Recall" fill="#d5a76c" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="F1 Score" fill="#9b8ab8" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+                  <YAxis
+                    tick={{ fill: "#849087", fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+
+                  <Tooltip
+                    formatter={(value) => formatMetric(value)}
+                    contentStyle={{
+                      borderRadius: "10px",
+                      border: "1px solid #e5ebe4",
+                      fontSize: "11px",
+                    }}
+                  />
+
+                  <Legend
+                    wrapperStyle={{
+                      fontSize: "11px",
+                      paddingTop: "12px",
+                    }}
+                  />
+
+                  <Bar
+                    dataKey="MAE"
+                    fill="#72977c"
+                    radius={[4, 4, 0, 0]}
+                  />
+
+                  <Bar
+                    dataKey="RMSE"
+                    fill="#7d9fc0"
+                    radius={[4, 4, 0, 0]}
+                  />
+
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p>Error metric data unavailable.</p>
+            )}
+
           </div>
         </div>
 
+        {/* R2 Chart */}
         <div className="comparison-panel secondary-panel">
+
           <div className="panel-heading">
             <div>
-              <h2>Model Performance Profile</h2>
-              <p>Visualise the balance between evaluation metrics.</p>
+              <h2>R² Score Comparison</h2>
+
+              <p>
+                Compare how well each model explains
+                the variance in the target variable.
+              </p>
             </div>
+
             <div className="mini-panel-icon green">
               <Activity size={18} />
             </div>
           </div>
 
           <div className="secondary-chart-container">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart
-                data={metrics.map((metric) => ({
-                  metric: metric.label,
-                  ...Object.fromEntries(
-                    models.map((model) => [
-                      model.name,
-                      model[metric.key],
-                    ])
-                  ),
-                }))}
-                outerRadius="72%"
-              >
-                <PolarGrid stroke="#e8ede7" />
 
-                <PolarAngleAxis
-                  dataKey="metric"
-                  tick={{ fill: "#718078", fontSize: 11 }}
-                />
-
-                <PolarRadiusAxis
-                  angle={30}
-                  domain={[85, 100]}
-                  tick={{ fill: "#9aa49c", fontSize: 9 }}
-                  axisLine={false}
-                />
-
-                <Tooltip
-                  formatter={(value) => `${value}%`}
-                  contentStyle={{
-                    borderRadius: "10px",
-                    border: "1px solid #e5ebe4",
-                    fontSize: "11px",
+            {r2ChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={r2ChartData}
+                  margin={{
+                    top: 10,
+                    right: 15,
+                    left: 0,
+                    bottom: 5,
                   }}
-                />
+                >
+                  <CartesianGrid
+                    stroke="#edf0eb"
+                    vertical={false}
+                    strokeDasharray="3 3"
+                  />
 
-                <Radar
-                  name="Logistic Regression"
-                  dataKey="Logistic Regression"
-                  stroke="#72977c"
-                  fill="#72977c"
-                  fillOpacity={0.10}
-                />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: "#718078", fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval={0}
+                  />
 
-                <Radar
-                  name="Decision Tree"
-                  dataKey="Decision Tree"
-                  stroke="#7d9fc0"
-                  fill="#7d9fc0"
-                  fillOpacity={0.08}
-                />
+                  <YAxis
+                    domain={["auto", "auto"]}
+                    tick={{ fill: "#849087", fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
 
-                <Radar
-                  name="Random Forest"
-                  dataKey="Random Forest"
-                  stroke="#d5a76c"
-                  fill="#d5a76c"
-                  fillOpacity={0.08}
-                />
+                  <Tooltip
+                    formatter={(value) => formatMetric(value)}
+                    contentStyle={{
+                      borderRadius: "10px",
+                      border: "1px solid #e5ebe4",
+                      fontSize: "11px",
+                    }}
+                  />
 
-                <Radar
-                  name="K-Nearest Neighbors"
-                  dataKey="K-Nearest Neighbors"
-                  stroke="#9b8ab8"
-                  fill="#9b8ab8"
-                  fillOpacity={0.07}
-                />
+                  <Bar
+                    dataKey="R² Score"
+                    fill="#d5a76c"
+                    radius={[5, 5, 0, 0]}
+                  />
 
-                <Legend
-                  wrapperStyle={{ fontSize: "10px", paddingTop: "8px" }}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p>R² score data unavailable.</p>
+            )}
+
           </div>
         </div>
+
       </div>
 
       {/* Best Model Highlight */}
-      <div className="comparison-highlight">
-        <div className="highlight-icon">
-          <Trophy size={22} />
-        </div>
+      {bestModel && (
+        <div className="comparison-highlight">
 
-        <div className="highlight-content">
-          <span>TOP PERFORMER · {metricLabel.toUpperCase()}</span>
-          <h3>{bestModel.name}</h3>
-          <p>
-            Achieved {bestModel[selectedMetric].toFixed(1)}% on the selected
-            evaluation metric.
-          </p>
-        </div>
+          <div className="highlight-icon">
+            <Trophy size={22} />
+          </div>
 
-        <div className="highlight-score">
-          <strong>{bestModel[selectedMetric].toFixed(1)}%</strong>
-          <small>Best score</small>
-        </div>
-      </div>
+          <div className="highlight-content">
 
-      {/* Detailed Metrics Table */}
+            <span>
+              TOP PERFORMER · {activeMetric.label.toUpperCase()}
+            </span>
+
+            <h3>{bestModel.name}</h3>
+
+            <p>
+              Achieved {formatMetric(bestModel[selectedMetric])}
+              {" "}on the selected evaluation metric.
+            </p>
+
+          </div>
+
+          <div className="highlight-score">
+            <strong>
+              {formatMetric(bestModel[selectedMetric])}
+            </strong>
+
+            <small>Best result</small>
+          </div>
+
+        </div>
+      )}
+
+      {/* Detailed Results Table */}
       <div className="comparison-panel">
+
         <div className="panel-heading">
           <div>
             <h2>Detailed Model Results</h2>
-            <p>Side-by-side comparison of all evaluation metrics.</p>
+
+            <p>
+              Latest saved experiment for each algorithm.
+            </p>
           </div>
+
           <div className="mini-panel-icon blue">
             <TrendingUp size={18} />
           </div>
         </div>
 
         <div className="comparison-table-wrapper">
+
           <table className="comparison-table">
+
             <thead>
               <tr>
                 <th>Model</th>
-                <th>Accuracy</th>
-                <th>Precision</th>
-                <th>Recall</th>
-                <th>F1 Score</th>
+                <th>Dataset</th>
+                <th>MAE</th>
+                <th>RMSE</th>
+                <th>R² Score</th>
+                <th>Experiment ID</th>
               </tr>
             </thead>
 
             <tbody>
               {models.map((model) => (
-                <tr key={model.name}>
-                  <td className="table-model-name">{model.name}</td>
-                  <td>{model.accuracy}%</td>
-                  <td>{model.precision}%</td>
-                  <td>{model.recall}%</td>
-                  <td>{model.f1}%</td>
+                <tr key={model.id}>
+
+                  <td className="table-model-name">
+                    {model.name}
+                  </td>
+
+                  <td>{model.dataset}</td>
+
+                  <td>{formatMetric(model.mae)}</td>
+
+                  <td>{formatMetric(model.rmse)}</td>
+
+                  <td>{formatMetric(model.r2_score)}</td>
+
+                  <td>
+                    EXP-{model.id.slice(-6)}
+                  </td>
+
                 </tr>
               ))}
             </tbody>
+
           </table>
+
         </div>
       </div>
 
-      {/* Sample Data Notice */}
+      {/* Comparability Notice */}
       <div className="comparison-note">
         <Info size={17} />
+
         <p>
-          Demonstration data only: these scores are illustrative and are not
-          results from trained models. Actual evaluation results will be
-          generated by the Python machine-learning backend.
+          {isComparable
+            ? "Results are retrieved from actual saved experiments in MongoDB. The latest experiment for each model is used in this comparison."
+            : "Warning: The latest experiments use different datasets or target columns. Their metrics may not be directly comparable. Run both models using the same dataset and target for a fair comparison."}
         </p>
       </div>
+
     </section>
   );
 };
